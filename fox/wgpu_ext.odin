@@ -9,7 +9,7 @@ import "vendor:wgpu"
 
 Callback_Data :: struct {
   ctx: runtime.Context
-  
+ 
 }
 
 wgpu_create_adapter :: proc(instance: wgpu.Instance) -> (adapter: wgpu.Adapter) {

@@ -29,16 +29,24 @@ mat4 :: lin.mat4
 quat :: lin.quat
 plane :: vec4
 
+transform :: struct {
+	position: vec3,
+	scale: vec3,
+	orientation: quat
+}
+
 dot :: proc{
   lin.dot_vec2, 
   lin.dot_vec3, 
   lin.dot_vec4,
+	lin.dot_quat,
 }
 
 length :: proc{
   lin.length_vec2,
   lin.length_vec3,
   lin.length_vec4,
+	lin.length_quat,
 }
 
 length_sqr :: proc{
@@ -173,9 +181,35 @@ normalize :: proc{
 	lin.normalize_vec2,
 	lin.normalize_vec3,
 	lin.normalize_vec4,
+	lin.normalize_quat,
 }
 
 cross :: proc{lin.cross_vec3}
+
+inverse :: proc{
+	lin.inverse_mat2, 
+	lin.inverse_mat3, 
+	lin.inverse_mat4,
+	lin.inverse_quat,
+}
+
+perspective :: proc{
+	lin.mat4Perspective,
+}
+
+translate :: proc{
+	lin.mat4Translate,
+}
+
+rotate :: proc{
+	lin.mat4Rotate,
+}
+
+mat_from_quat :: proc{
+	lin.mat4FromQuat,
+}
+
+
 
 determinant :: proc{lin.determinant_matrix2x2, lin.determinant_matrix3x3, lin.determinant_matrix4x4,}
 
