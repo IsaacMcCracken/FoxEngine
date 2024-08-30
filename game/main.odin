@@ -15,7 +15,6 @@ import "../fox"
 
 main :: proc() {
   
-
   fmt.println("Hellope")
 
   fox.app_init(800, 800, "Sexy Game")
@@ -23,6 +22,13 @@ main :: proc() {
 
   
   for fox.app_running() {
+
+    if fox.is_key_pressed(.SPACE) do fmt.println("Fart Smeller")
+
+    if fox.is_key_down(.LEFT_CONTROL) && fox.is_key_down(.LEFT_SHIFT) && fox.is_key_pressed(.H) {
+      fmt.println("Hot Reloading Goes here")
+    }
+
     fox.app_poll()
 
     // change api

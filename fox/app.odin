@@ -37,6 +37,9 @@ app_init :: proc(width, height: i32, title: string) {
     glfw.Init()
     glfw.WindowHint(glfw.CLIENT_API, glfw.NO_API)
     window = glfw.CreateWindow(width, height, strings.unsafe_string_to_cstring(title), nil, nil)
+
+    // Set Callbacks
+    glfw.SetKeyCallback(window, key_callback)
   }
 
   wgpu_init: {
@@ -81,6 +84,8 @@ app_init :: proc(width, height: i32, title: string) {
     assert(pipelines["default3d"] != nil)
   }
 
+  limits, ok := wgpu.DeviceGetLimits(app.render.device)
+  if ok do fmt.println(limits)
   defaults: {
 
   }
@@ -113,8 +118,4 @@ app_close :: proc() {
 
 app_running :: proc() -> (ok: bool) {
   return bool(!glfw.WindowShouldClose(app.window))
-}
-
-app_poll :: proc() {
-  glfw.PollEvents()
 }

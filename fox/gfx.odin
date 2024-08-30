@@ -2,6 +2,9 @@ package fox
 
 import "core:fmt"
 import "core:strings"
+import "core:encoding/hxa"
+
+import gltf "shared:glTF2"
 
 import "vendor:wgpu"
 import "vendor:glfw"
@@ -22,10 +25,11 @@ Vertex :: struct {
 }
 
 Uniforms :: struct {
-  ratio: f32,
-  time: f32
+  projection: math.mat4,
+  model: math.mat4,
+  time: f32,
+  _padding: [15]f32
 }
-
 
 uniform_buff: wgpu.Buffer
 bindgroup: wgpu.BindGroup
@@ -41,7 +45,7 @@ vertex_data := [?]Vertex{
   {position = {+0.5, +0.5, -0.3}, color = {0.0, 0.0, 1.0}},
   {position = {-0.5, +0.5, -0.3}, color = {0.0, 1.0, 0.0}},
   //tip
-  {position = {0, 0, 0.5}, color = {0, 0,0}}
+  {position = {0, 0, 0.5}, color = {0.2, 0.6,0.8}}
 }
 
 index_buff: wgpu.Buffer
@@ -56,7 +60,6 @@ index_data := [?]u16{
   2, 3, 4,
   3, 0, 4,
 
-  mat
 }
 
 
@@ -73,6 +76,30 @@ window_resize :: proc "c" () {
 
   config.width, config.height = get_window_size()
   wgpu.SurfaceConfigure(surface, &config)
+  if depth_texture != nil do wgpu.TextureRelease(depth_texture)
+  depth_texture = wgpu.DeviceCreateTexture(device, &wgpu.TextureDescriptor{
+    dimension = ._2D,
+    format = depth_texture_format,
+    mipLevelCount = 1,
+    sampleCount = 1,
+    usage = {.RenderAttachment},
+    size = {width = config.width, height = config.height, depthOrArrayLayers = 1},
+    viewFormatCount = 1,
+    viewFormats = &depth_texture_format,
+  })
+
+  if depth_texture_view != nil do wgpu.TextureViewRelease(depth_texture_view)
+  depth_texture_view = wgpu.TextureCreateView(depth_texture, &wgpu.TextureViewDescriptor{
+    aspect = .DepthOnly,
+    baseArrayLayer = 0,
+    arrayLayerCount = 1,
+    baseMipLevel = 0,
+    mipLevelCount = 1,
+    dimension = ._2D,
+    format = depth_texture_format,
+  })
+  
+  
 }
 
 begin_drawing :: proc() -> (ok: bool) {
@@ -80,8 +107,12 @@ begin_drawing :: proc() -> (ok: bool) {
 
   h, w := get_window_size()
   uniforms := Uniforms{
-    ratio = f32(w)/f32(h),
     time = f32(glfw.GetTime()),
+    model = math.mat_from_transform({orientation = math.quat_axis_angle({1, 0, 0}, f32(glfw.GetTime())), scale = {1, 1, 1}, position = {0, 0, -1}}),
+    // model = 1,
+
+    projection = math.perspective(80, f32(h)/f32(w), 0.01, 100)
+
   }
 
   wgpu.QueueWriteBuffer(queue, uniform_buff, 0, &uniforms, size_of(Uniforms))
@@ -204,30 +235,11 @@ create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
     format = depth_texture_format,
   })
   
+  
 
   
-  
-  
-  vertex_attributes := [?]wgpu.VertexAttribute{
-    {
-      format = .Float32x3,
-      offset = 0,
-      shaderLocation = 0,
-    },
-    {
-      format = .Float32x3,
-      offset = u64(size_of(vec3)),
-      shaderLocation = 1,
-    }
-  }
-  
-  vertex_buffer_layout := wgpu.VertexBufferLayout{
-    attributeCount = uint(len(vertex_attributes)),
-    attributes = &vertex_attributes[0],
-    arrayStride = u64(size_of(Vertex)),
-    stepMode = .Vertex,
-  }
-  
+  vertex_buffer_layout := create_vertex_buffer_layout(Vertex)
+  fmt.println(vertex_buffer_layout)
   vertex_buff = wgpu.DeviceCreateBuffer(device, &{usage = {.Vertex, .CopyDst}, label = "Vertex Buff", size = u64(size_of(vertex_data))})
   wgpu.QueueWriteBuffer(queue, vertex_buff, 0, &vertex_data[0], size_of(vertex_data))
   index_buff = wgpu.DeviceCreateBufferWithDataSlice(device, &{usage = {.Index, .CopyDst}, label = "Index Buff"}, index_data[:])

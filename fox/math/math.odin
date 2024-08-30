@@ -29,34 +29,35 @@ mat4 :: lin.mat4
 quat :: lin.quat
 plane :: vec4
 
-transform :: struct {
+Transform :: struct {
 	position: vec3,
 	scale: vec3,
 	orientation: quat
 }
 
+
 dot :: proc{
-  lin.dot_vec2, 
+	lin.dot_vec2, 
   lin.dot_vec3, 
   lin.dot_vec4,
 	lin.dot_quat,
 }
 
 length :: proc{
-  lin.length_vec2,
+	lin.length_vec2,
   lin.length_vec3,
   lin.length_vec4,
 	lin.length_quat,
 }
 
 length_sqr :: proc{
-  length_sqr_vec2,
+	length_sqr_vec2,
   length_sqr_vec3,
   length_sqr_vec4,
 }
 
 cos :: proc{
-  lin.cos_f32,
+	lin.cos_f32,
 	lin.cos_vec2,
 	lin.cos_vec3,
 	lin.cos_vec4,
@@ -197,8 +198,16 @@ perspective :: proc{
 	lin.mat4Perspective,
 }
 
+look_at :: proc{
+	lin.mat4LookAt,
+}
+
 translate :: proc{
 	lin.mat4Translate,
+}
+
+scale :: proc{
+	lin.mat4Scale,
 }
 
 rotate :: proc{
@@ -209,19 +218,22 @@ mat_from_quat :: proc{
 	lin.mat4FromQuat,
 }
 
-
+quat_axis_angle :: proc{lin.quatAxisAngle}
 
 determinant :: proc{lin.determinant_matrix2x2, lin.determinant_matrix3x3, lin.determinant_matrix4x4,}
 
 @(require_results) length_sqr_vec2 :: proc(v: vec2) -> f32 {
-  return dot(v, v)
+	return dot(v, v)
 }
 
 @(require_results) length_sqr_vec3 :: proc(v: vec3) -> f32 {
-  return dot(v, v)
+	return dot(v, v)
 }
 
 @(require_results) length_sqr_vec4 :: proc(v: vec4) -> f32 {
-  return dot(v, v)
+	return dot(v, v)
 }
 
+@(require_results) mat_from_transform :: proc(transform: Transform) -> mat4 {
+	return translate(transform.position) * mat_from_quat(transform.orientation) * scale(transform.scale)
+}
