@@ -9,7 +9,8 @@ struct Uniforms {
 
 struct VertexInput {
   @location(0) position: vec3f,
-  @location(1) color: vec3f,
+  @location(1) normal: vec3f,
+  @location(2) uv: vec2f
 }
 
 struct VertexOutput {
@@ -19,7 +20,7 @@ struct VertexOutput {
 
 @vertex fn vertex_main(in: VertexInput) -> VertexOutput {
   var out: VertexOutput;
-  out.color = in.color;
+  out.color = in.normal;
   
   out.position = uniforms.projection * uniforms.model * vec4f(in.position, 1.0);
   return out;

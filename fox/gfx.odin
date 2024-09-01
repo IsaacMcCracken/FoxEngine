@@ -3,13 +3,13 @@ package fox
 import "core:fmt"
 import "core:strings"
 import "core:encoding/hxa"
-
 import gltf "shared:glTF2"
 
 import "vendor:wgpu"
 import "vendor:glfw"
 
 import "math"
+import "model"
 
 vec3 :: math.vec3
 
@@ -17,11 +17,6 @@ vec3 :: math.vec3
 Render_Pipeline_Entry :: struct {
   pipeline: wgpu.RenderPipeline,
   layout: wgpu.PipelineLayout,
-}
-
-Vertex :: struct {
-  position: vec3,
-  color: vec3,
 }
 
 Uniforms :: struct {
@@ -37,30 +32,11 @@ depth_texture_format := wgpu.TextureFormat.Depth24Plus
 depth_texture: wgpu.Texture
 depth_texture_view: wgpu.TextureView
 
+witch: model.Model
+
 vertex_buff: wgpu.Buffer
-vertex_count :: len(vertex_data)
-vertex_data := [?]Vertex{
-  {position = {-0.5, -0.5, -0.3}, color = {1.0, 0.0, 0.0}},
-  {position = {+0.5, -0.5, -0.3}, color = {0.0, 1.0, 0.0}},
-  {position = {+0.5, +0.5, -0.3}, color = {0.0, 0.0, 1.0}},
-  {position = {-0.5, +0.5, -0.3}, color = {0.0, 1.0, 0.0}},
-  //tip
-  {position = {0, 0, 0.5}, color = {0.2, 0.6,0.8}}
-}
-
 index_buff: wgpu.Buffer
-index_count :: len(index_data)
-index_data := [?]u16{
-  // base
-  0, 1, 2,
-  0, 2, 3,
-  // sides
-  0, 1, 4,
-  1, 2, 4,
-  2, 3, 4,
-  3, 0, 4,
 
-}
 
 
 // probably put that somewhere else
@@ -175,9 +151,9 @@ begin_drawing :: proc() -> (ok: bool) {
   
   wgpu.RenderPassEncoderSetPipeline(renderpass, pipelines["default3d"])
   wgpu.RenderPassEncoderSetVertexBuffer(renderpass, 0, vertex_buff, 0, wgpu.BufferGetSize(vertex_buff))
-  wgpu.RenderPassEncoderSetIndexBuffer(renderpass, index_buff, .Uint16, 0, u64(size_of(u16) * index_count))
+  wgpu.RenderPassEncoderSetIndexBuffer(renderpass, index_buff, .Uint16, 0, u64(size_of(u16) * len(witch.indices)))
   wgpu.RenderPassEncoderSetBindGroup(renderpass, 0, bindgroup)
-  wgpu.RenderPassEncoderDrawIndexed(renderpass, index_count, 1, 0, 0, 0)
+  wgpu.RenderPassEncoderDrawIndexed(renderpass, u32(len(witch.indices)), 1, 0, 0, 0)
 
   wgpu.RenderPassEncoderEnd(renderpass)
   append(&draw.commands, wgpu.CommandEncoderFinish(encoder))
@@ -208,6 +184,9 @@ end_drawing :: proc() {
   }
 } 
 
+import "core:os"
+
+
 
 create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
   using app.render
@@ -236,13 +215,13 @@ create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
   })
   
   
-
+  ok: bool
+  witch, ok = model.load_s3d("witch.s3d")
   
-  vertex_buffer_layout := create_vertex_buffer_layout(Vertex)
+  vertex_buffer_layout := create_vertex_buffer_layout(model.Vertex)
   fmt.println(vertex_buffer_layout)
-  vertex_buff = wgpu.DeviceCreateBuffer(device, &{usage = {.Vertex, .CopyDst}, label = "Vertex Buff", size = u64(size_of(vertex_data))})
-  wgpu.QueueWriteBuffer(queue, vertex_buff, 0, &vertex_data[0], size_of(vertex_data))
-  index_buff = wgpu.DeviceCreateBufferWithDataSlice(device, &{usage = {.Index, .CopyDst}, label = "Index Buff"}, index_data[:])
+  vertex_buff = wgpu.DeviceCreateBufferWithDataSlice(device, &{usage = {.Vertex, .CopyDst}, label = "Witch Vertices"}, witch.vertices)
+  index_buff = wgpu.DeviceCreateBufferWithDataSlice(device, &{usage = {.Index, .CopyDst}, label = "Index Buff"}, witch.indices)
   uniform_buff = wgpu.DeviceCreateBuffer(device, &{usage = {.Uniform, .CopyDst}, label = "Uniform Buffer", size = u64(size_of(Uniforms))})
   
   

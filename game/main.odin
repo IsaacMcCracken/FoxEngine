@@ -9,7 +9,6 @@ import vmem "core:mem/virtual"
 
 import "vendor:wgpu"
 
-
 import "../fox"
 
 
