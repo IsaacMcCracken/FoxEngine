@@ -37,15 +37,12 @@ load_s3d :: proc(filename: string, allocator := context.allocator) -> (model: Mo
 
   
   data, err := os.read_entire_file_from_filename(filename)
-  fmt.println("error", err)
-  header_backing := data[:size_of(Header)]
 
+  header_backing := data[:size_of(Header)]
   header := transmute(^Header)raw_data(header_backing)
 
-  fmt.println(header)
-
   vertex_end := size_of(Header) + size_of(Vertex) * header.vertex_count
-  vertices := slice.reinterpret([]Vertex, data[size_of(header):vertex_end])
+  vertices := slice.reinterpret([]Vertex, data[size_of(Header):vertex_end])
 
   indices := slice.reinterpret([]u16, data[vertex_end:])
 

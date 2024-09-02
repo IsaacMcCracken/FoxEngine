@@ -19,11 +19,12 @@ Render_Pipeline_Entry :: struct {
   layout: wgpu.PipelineLayout,
 }
 
-Uniforms :: struct {
+Uniforms :: struct #align(16) {
   projection: math.mat4,
+  view: math.mat4,
   model: math.mat4,
-  time: f32,
-  _padding: [15]f32
+  color: vec3,
+  time: f32
 }
 
 uniform_buff: wgpu.Buffer
@@ -33,6 +34,7 @@ depth_texture: wgpu.Texture
 depth_texture_view: wgpu.TextureView
 
 witch: model.Model
+texture: Texture
 
 vertex_buff: wgpu.Buffer
 index_buff: wgpu.Buffer
@@ -78,15 +80,27 @@ window_resize :: proc "c" () {
   
 }
 
+
+position: vec3
 begin_drawing :: proc() -> (ok: bool) {
   using app.render
+
+
+  if is_key_down(.W) do position.z += 0.1
+  if is_key_down(.S) do position.z -= 0.1
+  if is_key_down(.A) do position.x += 0.1
+  if is_key_down(.D) do position.x -= 0.1
+  if is_key_down(.LEFT_SHIFT) do position.y -= 0.1
+  if is_key_down(.SPACE) do position.y += 0.1
 
   h, w := get_window_size()
   uniforms := Uniforms{
     time = f32(glfw.GetTime()),
-    model = math.mat_from_transform({orientation = math.quat_axis_angle({1, 0, 0}, f32(glfw.GetTime())), scale = {1, 1, 1}, position = {0, 0, -1}}),
+    model = math.mat_from_transform({orientation = 1, scale = {0.125, 0.125, 0.125}, position = position}),
     // model = 1,
-
+    color = {0.2, 0.7, 0.9},
+    
+    view = math.look_at({0,0,-1}, {}, {0, -1, 0}),
     projection = math.perspective(80, f32(h)/f32(w), 0.01, 100)
 
   }
@@ -217,6 +231,11 @@ create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
   
   ok: bool
   witch, ok = model.load_s3d("witch.s3d")
+  img: Image
+  img, ok = load_image_from_filename("typeing_witch.png", context.temp_allocator)
+  texture, ok = load_texture_from_image(img)
+
+  fmt.println("hopefully loaded witch:", ok)
   
   vertex_buffer_layout := create_vertex_buffer_layout(model.Vertex)
   fmt.println(vertex_buffer_layout)
@@ -226,19 +245,26 @@ create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
   
   
   
-  binding_layout_entries := wgpu.BindGroupLayoutEntry{
-    binding = 0,
-    visibility = {.Fragment, .Vertex},
-    buffer = {
-      type = .Uniform,
-      minBindingSize = size_of(Uniforms),
+  binding_layout_entries := [?]wgpu.BindGroupLayoutEntry{
+    {
+      binding = 0,
+      visibility = {.Fragment, .Vertex},
+      buffer = {
+        type = .Uniform,
+        minBindingSize = size_of(Uniforms),
+      }
       
+    },
+    {
+      binding = 1,
+      visibility = {.Fragment},
+      texture = {sampleType = .Float, viewDimension = ._2D}
     }
   }
   
   bindgroup_layout_desc := wgpu.BindGroupLayoutDescriptor{
-    entryCount = 1,
-    entries = &binding_layout_entries
+    entryCount = len(binding_layout_entries),
+    entries = &binding_layout_entries[0]
   }
   
   bindgroup_layout := wgpu.DeviceCreateBindGroupLayout(device, &bindgroup_layout_desc)
@@ -247,17 +273,34 @@ create_default3D_pipeline :: proc() -> (pipeline: wgpu.RenderPipeline) {
     bindGroupLayoutCount = 1,
     bindGroupLayouts = &bindgroup_layout,
   }
-  
-  bindgroup_desc := wgpu.BindGroupDescriptor{
-    label = "Bind Gorp",
-    layout = bindgroup_layout,
-    entryCount = 1,
-    entries = &wgpu.BindGroupEntry{
+
+  fmt.println(texture)
+  some_texture_view := wgpu.TextureCreateView(texture.handle, &wgpu.TextureViewDescriptor{
+    aspect = .All,
+    arrayLayerCount = 1,
+    mipLevelCount = 1,
+    dimension = ._2D,
+    format = .RGBA8Unorm,
+  })
+
+  bindgroup_entries := [?]wgpu.BindGroupEntry{
+    {
       binding = 0,
       buffer = uniform_buff,
       offset = 0,
       size = size_of(Uniforms),
     },
+    {
+      binding = 1,
+      textureView = some_texture_view,
+    }
+  }
+  
+  bindgroup_desc := wgpu.BindGroupDescriptor{
+    label = "Bind Gorp",
+    layout = bindgroup_layout,
+    entryCount = len(bindgroup_entries),
+    entries = raw_data(bindgroup_entries[:]),
   }
   
   bindgroup = wgpu.DeviceCreateBindGroup(device, &bindgroup_desc)

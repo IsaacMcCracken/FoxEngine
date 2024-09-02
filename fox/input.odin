@@ -6,6 +6,8 @@ import "core:mem"
 import "core:container/queue"
 import "core:c"
 
+import "vendor:raylib"
+
 @private keyboard: struct {
   current: [512]Input_Action,
   previous: [512]Input_Action,
@@ -135,11 +137,23 @@ Keyboard_Key :: enum u16 {
 
 }
 
+Mouse_Button :: enum u8 {
+	LEFT    = 0,                      // Mouse button left
+	RIGHT   = 1,                      // Mouse button right
+	MIDDLE  = 2,                      // Mouse button middle (pressed wheel)
+	SIDE    = 3,                      // Mouse button side (advanced mouse device)
+	EXTRA   = 4,                      // Mouse button extra (advanced mouse device)
+	FORWARD = 5,                      // Mouse button fordward (advanced mouse device)
+	BACK    = 6,                      // Mouse button back (advanced mouse device)
+}
+
 app_poll :: proc() {
   for &prev, i in keyboard.previous {
     prev = keyboard.current[i]
   }
   glfw.PollEvents()
+
+
 }
 
 key_callback :: proc "c" (window: glfw.WindowHandle, key, scancoder, action, mods: c.int) {
